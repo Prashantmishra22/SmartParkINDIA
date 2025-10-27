@@ -1,0 +1,920 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>SmartPark India — EV Smart Parking</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.emailjs.com/dist/email.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+  <style>
+    /* ========= PROFESSIONAL MODERN THEME ========= */
+    *{box-sizing:border-box;margin:0;padding:0;font-family:'Inter',system-ui,Arial,sans-serif;}
+    body{
+      background:linear-gradient(135deg,#0f1419,#1a2332,#2d3748);
+      background-size:400% 400%;
+      animation:grad 20s ease infinite;
+      color:#e2e8f0;min-height:100vh;
+      line-height:1.6;
+      -webkit-font-smoothing:antialiased;
+    }
+    @keyframes grad{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
+
+    .container{max-width:1200px;margin:0 auto;padding:0 20px;}
+
+    /* navbar */
+    .navbar{position:sticky;top:0;z-index:1000;display:flex;align-items:center;justify-content:space-between;padding:16px 24px;background:rgba(15,23,42,0.95);backdrop-filter:blur(12px);border-bottom:1px solid rgba(255,255,255,0.1);box-shadow:0 4px 20px rgba(0,0,0,0.3);transition:all 0.3s ease;}
+    .brand{display:flex;align-items:center;gap:16px}
+    .logo{width:60px;border-radius:8px;filter:drop-shadow(0 0 8px rgba(59,130,246,0.3))}
+    .brand h1{font-size:1.5rem;font-weight:700;color:#f1f5f9;margin:0}
+    .brand p{font-size:0.875rem;color:#94a3b8;margin:0}
+    .navlinks{display:flex;gap:24px}
+    .navlinks a{color:#cbd5e1;text-decoration:none;font-weight:500;padding:8px 12px;border-radius:6px;transition:all 0.2s ease;}
+    .navlinks a:hover{background:rgba(255,255,255,0.1);color:#f8fafc}
+    .navlinks a.active{background:#3b82f6;color:#fff}
+
+    /* hero */
+    .hero{text-align:center;padding:80px 0;margin-bottom:40px;}
+    .hero h1{font-size:3rem;font-weight:800;color:#f8fafc;margin-bottom:16px;text-shadow:0 0 20px rgba(59,130,246,0.3)}
+    .hero p{font-size:1.25rem;color:#cbd5e1;max-width:600px;margin:0 auto;}
+
+    /* top row */
+    .top{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:24px;margin-bottom:40px;}
+    .card{background:rgba(30,41,59,0.8);padding:24px;border-radius:16px;border:1px solid rgba(255,255,255,0.1);box-shadow:0 8px 32px rgba(0,0,0,0.3);transition:transform 0.2s ease,box-shadow 0.2s ease;}
+    .card:hover{transform:translateY(-4px);box-shadow:0 12px 40px rgba(0,0,0,0.4);}
+    .card h3{color:#3b82f6;margin-bottom:12px;font-size:1.25rem;font-weight:600}
+    .small{font-size:1rem;color:#94a3b8;}
+
+    /* parking grid */
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:16px;margin-top:20px;}
+    .slot{padding:20px;border-radius:12px;text-align:center;font-weight:600;cursor:pointer;user-select:none;border:2px solid transparent;transition:all 0.3s ease;}
+    .slot.free{background:linear-gradient(145deg,#10b981,#059669);color:#f0fdf4;border-color:#10b981;}
+    .slot.occupied{background:linear-gradient(145deg,#ef4444,#dc2626);color:#fef2f2;border-color:#ef4444;transform:scale(1.02);}
+    .slot.sensing{outline:3px dashed #fbbf24;animation:pulse 1s infinite;}
+    .slot.highlight{animation:blink 1s infinite;}
+    @keyframes blink{0%,50%{opacity:1;}51%,100%{opacity:0.5;}}
+
+    .slot small{display:block;margin-top:8px;font-weight:500;color:inherit;opacity:0.9;}
+
+    /* controls */
+    .controls{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:16px;}
+    .btn{background:linear-gradient(145deg,#3b82f6,#2563eb);padding:12px 20px;border-radius:8px;color:#fff;border:none;cursor:pointer;font-weight:600;box-shadow:0 4px 14px rgba(59,130,246,0.4);transition:all 0.2s ease;}
+    .btn:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(59,130,246,0.6);}
+    .btn.warn{background:linear-gradient(145deg,#f59e0b,#d97706);}
+    .counter{font-size:1.5rem;font-weight:700;color:#f8fafc;display:flex;flex-direction:column;text-align:center;}
+    .counter span{font-size:0.875rem;color:#94a3b8;font-weight:400;}
+
+    /* notifications */
+    #notif{position:fixed;right:24px;bottom:24px;z-index:1200;display:flex;flex-direction:column;gap:8px;max-width:300px;}
+    .note{background:rgba(15,23,42,0.9);padding:12px 16px;border-radius:8px;backdrop-filter:blur(8px);box-shadow:0 8px 32px rgba(0,0,0,0.4);color:#f8fafc;border-left:4px solid #3b82f6;}
+
+    /* sections */
+    section{margin-bottom:40px;background:rgba(30,41,59,0.6);padding:32px;border-radius:16px;border:1px solid rgba(255,255,255,0.05);box-shadow:0 4px 24px rgba(0,0,0,0.2);}
+    h2{color:#f8fafc;margin-bottom:16px;font-size:2rem;font-weight:700;}
+    p{color:#cbd5e1;margin-bottom:16px;}
+
+    /* form */
+    form{display:flex;flex-direction:column;gap:16px;margin-top:16px;}
+    input,textarea{padding:14px;border-radius:8px;border:1px solid rgba(255,255,255,0.2);background:rgba(51,65,85,0.5);color:#f8fafc;outline:none;font-size:1rem;transition:all 0.2s ease;}
+    input:focus,textarea:focus{border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,0.1);transform:translateY(-1px);}
+    .muted{font-size:0.875rem;color:#94a3b8;}
+
+    /* queue */
+    .queueList{margin-top:12px;display:flex;flex-direction:column;gap:8px;}
+    .qitem{padding:10px 14px;border-radius:6px;background:rgba(51,65,85,0.3);font-weight:500;border-left:3px solid #3b82f6;}
+
+    /* footer */
+    .footer{background:rgba(15,23,42,0.9);padding:24px;text-align:center;border-top:1px solid rgba(255,255,255,0.1);margin-top:60px;}
+    .footer p{color:#94a3b8;margin:0;font-size:0.875rem;}
+
+    /* responsive */
+    @media (max-width:768px){
+      .hero h1{font-size:2.5rem;}
+      .hero p{font-size:1rem;}
+      .top{grid-template-columns:1fr;}
+      .navlinks{display:none;}
+      .logo{width:50px;}
+      .brand h1{font-size:1.25rem;}
+      .grid{grid-template-columns:repeat(auto-fit,minmax(120px,1fr));}
+      section{padding:24px;}
+    }
+
+    @keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.5;}}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <nav class="navbar" aria-label="main">
+      <div class="brand">
+        <img class="logo" src="https://s3-eu-west-1.amazonaws.com/tpd/logos/5c52cdc2e78c440001024209/0x0.png" alt="logo">
+        <div>
+          <div style="font-weight:800;font-size:1.05rem">SmartPark India</div>
+          <div class="muted" style="font-size:0.82rem">AI-powered EV parking & charging management</div>
+        </div>
+      </div>
+
+      <div class="navlinks">
+        <a href="#home" class="active">Home</a>
+        <a href="#about">About</a>
+        <a href="#contact">Contact</a>
+        <a href="#query">Query</a>
+      </div>
+    </nav>
+
+    <!-- hero -->
+    <div class="hero">
+      <h1>SmartPark India</h1>
+      <p>Revolutionizing EV parking with AI-powered management, real-time sensor simulation, and intelligent queueing systems.</p>
+    </div>
+
+    <!-- top row: counter / controls / availability -->
+    <div class="top">
+        <h3>Real-time Availability</h3>
+        <div class="small">Live slots status from sensor-simulator</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:12px">
+          <div class="counter">
+            <div id="availCount" style="font-size:1.5rem">5 / 5</div>
+            <span>Available / Total</span>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end">
+            <div class="controls">
+              <button class="btn" id="simulateToggle">Sensor Simulator: ON</button>
+              <button class="btn warn" id="resetBtn" title="Reset all slots to free">Reset Slots</button>
+            </div>
+            <div class="muted" id="lastUpdate">Last update: just now</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>AI Prediction</h3>
+        <div class="small">Smart suggestion based on current occupancy</div>
+        <div style="margin-top:10px;display:flex;gap:8px;align-items:center;justify-content:center;flex-direction:column">
+          <div id="aiText" style="font-weight:800;font-size:1.05rem;color:#fff">Click Predict</div>
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <button class="btn" id="aiBtn">Get AI Prediction</button>
+            <button class="btn" id="suggestBtn">Suggest Best Slot</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Queue (If Full)</h3>
+        <div class="small">Join queue when slots are full</div>
+        <div style="margin-top:10px">
+          <button class="btn" id="joinQueueBtn">Join Queue</button>
+          <div class="queueList" id="queueList"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>AI Agent Chat</h3>
+        <div class="small">Ask our AI for personalized parking advice (voice enabled)</div>
+        <div style="margin-top:10px">
+          <div id="chatMessages" style="height:150px;overflow-y:auto;background:rgba(51,65,85,0.3);padding:10px;border-radius:8px;margin-bottom:10px;font-size:0.9rem;"></div>
+          <input id="chatInput" placeholder="Ask about parking..." style="width:100%;margin-bottom:8px;">
+          <div style="display:flex;gap:8px;">
+            <button class="btn" id="sendChatBtn">Send</button>
+            <button class="btn" id="voiceChatBtn" title="Voice input">🎤 Voice</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- HOME section -->
+    <section id="home">
+      <h2>🅿️ Parking Slots</h2>
+      <p class="muted">Click a free slot to reserve. Booked slots auto-release after <strong id="autoReleaseTime">90s</strong>.</p>
+
+      <div class="grid" id="grid">
+        <!-- slots will be injected by JS -->
+      </div>
+    </section>
+
+    <!-- about -->
+    <section id="about">
+      <h2>About SmartPark India</h2>
+      <p>SmartPark India is a low-cost, scalable EV parking & charging management demo. We simulate sensors and use smart rules/AI to suggest best slots and manage queueing — ready to be extended to real sensor hardware and ML models.</p>
+    </section>
+
+    <!-- contact & query -->
+    <section id="contact">
+      <h2>Contact & Submit Query</h2>
+      <p class="muted">Send us feedback or questions — queries are saved locally (demo) so you can show a stored list later.</p>
+      <p class="muted">For direct contact: Phone: 9569845304 | Team Emails: ps956984mishr@gmail.com, abhi22112004@gmail.com, prathammishra029@gmail.com, atul27091@gmail.com</p>
+
+      <form id="queryForm">
+        <input id="qname" placeholder="Your name" required>
+        <input id="qemail" type="email" placeholder="Your email" required>
+        <textarea id="qmsg" rows="4" placeholder="Your query" required></textarea>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button class="btn" type="submit">Submit Query</button>
+          <button class="btn" id="showQueries" type="button">Show Saved Queries</button>
+        </div>
+      </form>
+
+      <div id="savedQueries" style="margin-top:12px"></div>
+    </section>
+
+    <!-- footer -->
+    <footer class="footer">
+      <p>&copy; 2024 SmartPark India. All rights reserved. | Powered by AI & Sensor Technology</p>
+    </footer>
+  </div>
+
+  <!-- notifications -->
+  <div id="notif"></div>
+
+  <!-- EV Battery Alert Modal -->
+  <div id="batteryModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:2000;justify-content:center;align-items:center;">
+    <div style="background:rgba(30,41,59,0.95);padding:24px;border-radius:16px;border:1px solid rgba(255,255,255,0.1);box-shadow:0 8px 32px rgba(0,0,0,0.5);max-width:400px;width:90%;text-align:center;">
+      <h3 style="color:#ef4444;margin-bottom:16px;">⚠️ Low Battery Alert</h3>
+      <p id="modalMessage" style="color:#e2e8f0;margin-bottom:16px;"></p>
+      <p id="modalPath" style="color:#94a3b8;font-size:0.9rem;margin-bottom:20px;"></p>
+      <button id="dismissModal" class="btn" style="background:linear-gradient(145deg,#10b981,#059669);">Dismiss</button>
+    </div>
+  </div>
+
+  <script>
+  /****************************************
+   * SmartPark India — Frontend logic
+   * - slot state persisted to localStorage
+   * - sensor simulator toggles occupancy for free slots
+   * - auto-release timer for reserved slots
+   * - AI prediction uses real occupancy percentage
+   * - query form saved to localStorage
+   * - basic queue management
+   ****************************************/
+
+  /* CONFIG */
+  const AUTO_RELEASE_SECONDS = 90;   // auto-release after reservation (demo)
+  const SENSOR_INTERVAL_MS = 8000;   // simulator interval
+  const TOTAL_SLOTS = 5;
+
+  // EmailJS initialization
+  emailjs.init('XOzTiKRF3wWnW2ohS');
+
+  /* State */
+  let slots = {};     // { slot1: {state:'free'|'occupied'|'booked', timerId: null }, ... }
+  let sensorEnabled = true;
+  let queue = [];     // simple array of names
+  const storageKey = 'smartpark_slots_v1';
+  const qKey = 'smartpark_queries_v1';
+  const queueKey = 'smartpark_queue_v1';
+
+  /* EV Tracking State */
+  let evCars = [
+    {id: 'car1', battery: 100, location: {lat: 28.6139, lng: 77.2090}, connectedTo: null, alerted: false},
+    {id: 'car2', battery: 100, location: {lat: 28.7041, lng: 77.1025}, connectedTo: null, alerted: false},
+    {id: 'car3', battery: 100, location: {lat: 28.5355, lng: 77.3910}, connectedTo: null, alerted: false}
+  ];
+  const chargingStations = [
+    {id: 'station1', location: {lat: 28.6139, lng: 77.2090}, available: true},
+    {id: 'station2', location: {lat: 28.7041, lng: 77.1025}, available: true},
+    {id: 'station3', location: {lat: 28.5355, lng: 77.3910}, available: true}
+  ];
+  const LOW_BATTERY_THRESHOLD = 20; // Alert when battery drops below 20%
+
+  /* Helper: Calculate distance between two lat/lng points (Haversine formula) */
+  function getDistance(loc1, loc2) {
+    const R = 6371; // Radius of the Earth in km
+    const dLat = (loc2.lat - loc1.lat) * Math.PI / 180;
+    const dLon = (loc2.lng - loc1.lng) * Math.PI / 180;
+    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+      Math.cos(loc1.lat * Math.PI / 180) * Math.cos(loc2.lat * Math.PI / 180) *
+      Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
+  }
+
+  /* Show battery alert modal */
+  function showBatteryAlert(car) {
+    const modal = document.getElementById('batteryModal');
+    const messageEl = document.getElementById('modalMessage');
+    const pathEl = document.getElementById('modalPath');
+    messageEl.textContent = `EV ${car.id} has low battery (${Math.round(car.battery)}%). Please move to a charging station.`;
+    // Count other low battery cars
+    const lowBatteryCars = evCars.filter(c => c.battery <= LOW_BATTERY_THRESHOLD && c.id !== car.id);
+    const lowBatteryCount = lowBatteryCars.length;
+    // Find nearest available station
+    const availableStations = chargingStations.filter(s => s.available);
+    if (availableStations.length === 0) {
+      pathEl.textContent = `No available charging stations. ${lowBatteryCount} other EVs also low on battery. Consider moving to a nearby station.`;
+    } else {
+      // Calculate distances
+      availableStations.forEach(s => {
+        s.distance = getDistance(car.location, s.location);
+      });
+      availableStations.sort((a, b) => a.distance - b.distance);
+      const nearest = availableStations[0];
+      // Estimate wait time: assume each station charges one car, discharge ~10% per 8s, charge ~20% per 8s or something simple
+      const avgDischargePerInterval = 10; // approx 10%
+      const estimatedIntervalsToCharge = Math.ceil((100 - car.battery) / 20); // assume 20% charge per interval
+      const waitTimeSeconds = Math.max(0, (lowBatteryCount - availableStations.length) * 8); // rough estimate
+      const totalTime = waitTimeSeconds + (estimatedIntervalsToCharge * 8);
+      pathEl.textContent = `Nearest station: ${nearest.id} at (${nearest.location.lat.toFixed(4)}, ${nearest.location.lng.toFixed(4)}) - Distance: ${nearest.distance.toFixed(2)} km. ${lowBatteryCount} other EVs low on battery. Estimated wait: ${Math.round(totalTime)}s.`;
+      if (totalTime > 30) {
+        // Suggest next station
+        if (availableStations.length > 1) {
+          const next = availableStations[1];
+          next.distance = getDistance(car.location, next.location);
+          pathEl.textContent += ` Consider moving to ${next.id} (${next.distance.toFixed(2)} km) for faster charging.`;
+        } else {
+          pathEl.textContent += ` Consider moving to another station for faster charging.`;
+        }
+      }
+    }
+    modal.style.display = 'flex';
+  }
+
+  /* ML State */
+  let historicalOccupancy = []; // Array of past occupancy percentages (0-100)
+  let mlModel = null; // TensorFlow.js linear regression model
+  const MAX_HISTORY = 10; // Keep last 10 data points
+
+  /* DOM refs */
+  const gridEl = document.getElementById('grid');
+  const availCountEl = document.getElementById('availCount');
+  const lastUpdateEl = document.getElementById('lastUpdate');
+  const simulateToggleBtn = document.getElementById('simulateToggle');
+  const resetBtn = document.getElementById('resetBtn');
+  const aiBtn = document.getElementById('aiBtn');
+  const aiText = document.getElementById('aiText');
+  const suggestBtn = document.getElementById('suggestBtn');
+  const joinQueueBtn = document.getElementById('joinQueueBtn');
+  const queueListEl = document.getElementById('queueList');
+  const chatMessagesEl = document.getElementById('chatMessages');
+  const chatInputEl = document.getElementById('chatInput');
+  const sendChatBtn = document.getElementById('sendChatBtn');
+  const voiceChatBtn = document.getElementById('voiceChatBtn');
+  const notifEl = document.getElementById('notif');
+  const autoReleaseTimeEl = document.getElementById('autoReleaseTime');
+
+  autoReleaseTimeEl.textContent = AUTO_RELEASE_SECONDS + 's';
+
+  /* Helper: notify */
+  function notify(msg, timeout=3500){
+    const n = document.createElement('div');
+    n.className = 'note';
+    n.textContent = msg;
+    notifEl.prepend(n);
+    setTimeout(()=> n.remove(), timeout);
+  }
+
+  /* Initialize slots (attempt to load from localStorage) */
+  function loadSlots(){
+    const raw = localStorage.getItem(storageKey);
+    if(raw){
+      try{
+        slots = JSON.parse(raw);
+        // ensure timerIds cleared
+        for(const k of Object.keys(slots)) slots[k].timerId = null;
+        return;
+      }catch(e){ /* ignore */ }
+    }
+    // default init
+    slots = {};
+    for(let i=1;i<=TOTAL_SLOTS;i++){
+      slots['slot'+i] = { state: 'free', reservedUntil: null, timerId: null };
+    }
+    saveSlots();
+  }
+
+  function saveSlots(){ localStorage.setItem(storageKey, JSON.stringify(slots)); }
+
+  /* Play tone for free slot */
+  function playFreeSlotTone(){
+    try {
+      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+
+      oscillator.frequency.setValueAtTime(800, audioContext.currentTime); // Frequency in Hz
+      oscillator.type = 'sine'; // Waveform type
+
+      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime); // Volume
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5); // Fade out
+
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.5); // Duration
+    } catch (e) {
+      // Fallback if Web Audio API not supported
+      console.log('Tone not supported');
+    }
+  }
+
+  /* Highlight free slot */
+  function highlightFreeSlot(slotId){
+    const slotEl = document.getElementById(slotId);
+    if(slotEl){
+      slotEl.classList.add('highlight');
+      setTimeout(() => slotEl.classList.remove('highlight'), 3000); // Remove highlight after 3 seconds
+    }
+  }
+
+  /* Render grid UI */
+  function renderGrid(){
+    gridEl.innerHTML = '';
+    let freeCount = 0;
+    for(const id of Object.keys(slots)){
+      const s = slots[id];
+      const div = document.createElement('div');
+      div.id = id;
+      div.className = 'slot ' + (s.state === 'free' ? 'free' : 'occupied');
+      if(s.state === 'booked') div.className = 'slot occupied';
+      // Text
+      if(s.state === 'free') {
+        div.innerHTML = `${id.toUpperCase()}<small>Free</small>`;
+        freeCount++;
+      } else if(s.state === 'booked'){
+        div.innerHTML = `${id.toUpperCase()}<small>Reserved</small>`;
+      } else {
+        div.innerHTML = `${id.toUpperCase()}<small>Occupied</small>`;
+      }
+
+      // click behavior: try to reserve if free
+      div.addEventListener('click', ()=> onSlotClick(id));
+      gridEl.appendChild(div);
+    }
+    availCountEl.textContent = `${freeCount} / ${TOTAL_SLOTS}`;
+  }
+
+  /* click slot */
+  function onSlotClick(id){
+    const s = slots[id];
+    if(s.state === 'free'){
+      // reserve
+      reserveSlot(id);
+    } else if(s.state === 'booked'){
+      // cancel reservation
+      cancelReservation(id);
+    } else {
+      notify(`${id.toUpperCase()} is currently occupied.`);
+    }
+  }
+
+  /* reserve function */
+  function reserveSlot(id){
+    // if queue exists and user not first, block? (simple demo: just reserve)
+    slots[id].state = 'booked';
+    const until = Date.now() + AUTO_RELEASE_SECONDS*1000;
+    slots[id].reservedUntil = until;
+    // set auto-release
+    const tid = setTimeout(()=> {
+      // auto release
+      if(slots[id] && slots[id].state === 'booked'){
+        slots[id].state = 'free';
+        slots[id].reservedUntil = null;
+        saveSlots();
+        renderGrid();
+        notify(`${id.toUpperCase()} auto-released`);
+        processQueue();
+      }
+    }, AUTO_RELEASE_SECONDS*1000);
+    slots[id].timerId = tid;
+    saveSlots();
+    renderGrid();
+    notify(`${id.toUpperCase()} reserved for ${AUTO_RELEASE_SECONDS}s`);
+  }
+
+  function cancelReservation(id){
+    // clear timer if exists
+    const tid = slots[id].timerId;
+    if(tid) clearTimeout(tid);
+    slots[id].timerId = null;
+    slots[id].state = 'free';
+    slots[id].reservedUntil = null;
+    saveSlots();
+    renderGrid();
+    notify(`${id.toUpperCase()} reservation cancelled`);
+    processQueue();
+  }
+
+  /* sensor simulator: toggles occupancy for free slots randomly */
+  let sensorInterval = null;
+  function startSensorSimulator(){
+    if(sensorInterval) clearInterval(sensorInterval);
+    sensorInterval = setInterval(async ()=> {
+      // pick a random free slot and randomly mark occupied or free
+      const freeSlots = Object.keys(slots).filter(k => slots[k].state === 'free');
+      const occSlots = Object.keys(slots).filter(k => slots[k].state === 'occupied');
+      // random event: car arrives at some free slot -> occupied
+      if(freeSlots.length > 0 && Math.random() < 0.6){
+        const pick = freeSlots[Math.floor(Math.random()*freeSlots.length)];
+        slots[pick].state = 'occupied';
+        notify(`${pick.toUpperCase()} now occupied (sensor)`);
+      } else if(occSlots.length > 0 && Math.random() < 0.4){
+        // random car leaves from occupied slot
+        const pick = occSlots[Math.floor(Math.random()*occSlots.length)];
+        slots[pick].state = 'free';
+        notify(`${pick.toUpperCase()} is now free (sensor)`);
+        // Speak announcement
+        if ('speechSynthesis' in window) {
+          const utterance = new SpeechSynthesisUtterance(`${pick.toUpperCase()} is now free`);
+          window.speechSynthesis.speak(utterance);
+        }
+        highlightFreeSlot(pick);
+        playFreeSlotTone();
+        processQueue();
+      }
+      // Battery discharge for EVs not charging
+      evCars.forEach(car => {
+        if (car.connectedTo === null) { // not charging
+          const discharge = Math.random() * 10 + 5; // 5-15%
+          car.battery = Math.max(0, car.battery - discharge);
+          if (car.battery <= LOW_BATTERY_THRESHOLD && !car.alerted) {
+            showBatteryAlert(car);
+            car.alerted = true;
+          }
+        }
+      });
+
+      // Update historical data and check for anomalies
+      updateHistoricalData();
+      if(detectAnomaly()){
+        notify('⚠️ Anomaly detected in occupancy changes!');
+      }
+      saveSlots();
+      renderGrid();
+      lastUpdateEl.textContent = 'Last update: ' + new Date().toLocaleTimeString();
+    }, SENSOR_INTERVAL_MS);
+  }
+
+  function stopSensorSimulator(){
+    if(sensorInterval) clearInterval(sensorInterval);
+    sensorInterval = null;
+  }
+
+  /* Reset */
+  function resetAll(){
+    for(const k of Object.keys(slots)){
+      if(slots[k].timerId) clearTimeout(slots[k].timerId);
+      slots[k] = {state:'free',reservedUntil:null,timerId:null};
+    }
+    saveSlots(); renderGrid(); notify('All slots reset to free');
+    processQueue();
+  }
+
+  /* ML Functions */
+  async function initMLModel(){
+    // Initialize historical data with simulated past values
+    if(historicalOccupancy.length === 0){
+      for(let i=0; i<MAX_HISTORY; i++){
+        historicalOccupancy.push(Math.floor(Math.random() * 101)); // 0-100%
+      }
+    }
+    // Create simple linear regression model
+    mlModel = tf.sequential();
+    mlModel.add(tf.layers.dense({inputShape: [1], units: 1}));
+    mlModel.compile({optimizer: 'sgd', loss: 'meanSquaredError'});
+    await trainMLModel();
+  }
+
+  async function trainMLModel(){
+    if(historicalOccupancy.length < 2) return;
+    const xs = tf.tensor2d(historicalOccupancy.slice(0, -1).map((_, i) => [i]), [historicalOccupancy.length - 1, 1]);
+    const ys = tf.tensor2d(historicalOccupancy.slice(1), [historicalOccupancy.length - 1, 1]);
+    await mlModel.fit(xs, ys, {epochs: 10, verbose: 0});
+  }
+
+  function updateHistoricalData(){
+    const total = Object.keys(slots).length;
+    const free = Object.keys(slots).filter(k=>slots[k].state==='free').length;
+    const occupancyPct = Math.round(((total - free) / total) * 100);
+    historicalOccupancy.push(occupancyPct);
+    if(historicalOccupancy.length > MAX_HISTORY) historicalOccupancy.shift();
+    trainMLModel(); // Retrain with new data
+  }
+
+  function detectAnomaly(){
+    if(historicalOccupancy.length < 2) return false;
+    const recent = historicalOccupancy.slice(-2);
+    const change = Math.abs(recent[1] - recent[0]);
+    const avgChange = historicalOccupancy.slice(0, -1).reduce((sum, val, i, arr) => {
+      if(i === 0) return 0;
+      return sum + Math.abs(val - arr[i-1]);
+    }, 0) / (historicalOccupancy.length - 1);
+    return change > avgChange * 2; // Anomaly if change is 2x average
+  }
+
+  async function predictNextOccupancy(){
+    if(!mlModel || historicalOccupancy.length === 0) return null;
+    const input = tf.tensor2d([[historicalOccupancy.length - 1]], [1, 1]);
+    const prediction = mlModel.predict(input);
+    const predValue = await prediction.data();
+    return Math.max(0, Math.min(100, Math.round(predValue[0])));
+  }
+
+  function predictQueueWaitTime(){
+    const freeSlots = Object.keys(slots).filter(k=>slots[k].state==='free').length;
+    if(freeSlots > 0) return 0;
+    // Estimate based on historical trends
+    const avgFreeRate = historicalOccupancy.reduce((sum, val) => sum + (100 - val), 0) / historicalOccupancy.length;
+    const estimatedTime = queue.length / (avgFreeRate / 100) * (SENSOR_INTERVAL_MS / 1000); // Rough estimate
+    return Math.round(estimatedTime);
+  }
+
+  /* AI: prediction based on occupancy percentage and ML */
+  async function getAIPrediction(){
+    const total = Object.keys(slots).length;
+    const free = Object.keys(slots).filter(k=>slots[k].state==='free').length;
+    const freePct = Math.round((free/total)*100);
+
+    let prediction = '';
+    if(freePct >= 70) prediction = `Low demand expected — ${free} slots free (${freePct}%).`;
+    else if(freePct >= 40) prediction = `Moderate demand — ${free} slots free (${freePct}%). Consider booking soon.`;
+    else if(freePct >= 15) prediction = `High demand — only ${free} slots free (${freePct}%). Suggest nearest free slot.`;
+    else prediction = `Very high demand — ${free} slots free (${freePct}%). Join queue or wait.`;
+
+    // Add ML prediction if available
+    const mlPred = await predictNextOccupancy();
+    if(mlPred !== null){
+      prediction += ` ML predicts next occupancy: ${mlPred}%.`;
+    }
+
+    return prediction;
+  }
+
+  /* Suggest best slot: choose earliest free slot (closest simulated) */
+  function suggestBestSlot(){
+    // prefer free, then suggest earliest to be free (no ML here)
+    const freeKeys = Object.keys(slots).filter(k=>slots[k].state==='free');
+    if(freeKeys.length>0) return freeKeys[0]; // simple strategy
+    return null;
+  }
+
+  /* Queue management */
+  function loadQueue(){ const raw = localStorage.getItem(queueKey); if(raw) queue = JSON.parse(raw); else queue=[]; renderQueue(); }
+  function saveQueue(){ localStorage.setItem(queueKey, JSON.stringify(queue)); renderQueue(); }
+
+  function joinQueue(){
+    const name = prompt('Enter your name to join queue (demo):');
+    if(!name) return;
+    queue.push({name, time: Date.now()});
+    saveQueue();
+    notify(`You joined the queue at position ${queue.length}`);
+  }
+
+  function processQueue(){
+    // If there is a free slot and someone waiting -> assign and notify
+    const freeKey = Object.keys(slots).find(k=>slots[k].state==='free');
+    if(freeKey && queue.length>0){
+      const user = queue.shift();
+      saveQueue();
+      // auto-reserve for this user
+      slots[freeKey].state = 'booked';
+      slots[freeKey].reservedUntil = Date.now() + AUTO_RELEASE_SECONDS*1000;
+      const tid = setTimeout(()=> {
+        if(slots[freeKey] && slots[freeKey].state==='booked'){
+          slots[freeKey].state='free'; slots[freeKey].reservedUntil=null; saveSlots(); renderGrid();
+          notify(`${freeKey.toUpperCase()} auto-released`);
+          processQueue();
+        }
+      }, AUTO_RELEASE_SECONDS*1000);
+      slots[freeKey].timerId = tid;
+      saveSlots(); renderGrid();
+      notify(`Queue: ${user.name} assigned ${freeKey.toUpperCase()} (auto-reserved ${AUTO_RELEASE_SECONDS}s)`);
+    }
+  }
+
+  function renderQueue(){
+    queueListEl.innerHTML = '';
+    for(let i=0;i<queue.length;i++){
+      const el = document.createElement('div'); el.className='qitem'; el.textContent = `${i+1}. ${queue[i].name}`;
+      queueListEl.appendChild(el);
+    }
+  }
+
+  /* Queries storage */
+  function loadSavedQueries(){
+    const raw = localStorage.getItem(qKey);
+    if(!raw) return [];
+    try { return JSON.parse(raw); } catch(e){ return []; }
+  }
+  function saveQueryObj(q){
+    const arr = loadSavedQueries(); arr.push(q); localStorage.setItem(qKey, JSON.stringify(arr));
+  }
+  function showSavedQueries(){
+    const arr = loadSavedQueries();
+    const target = document.getElementById('savedQueries');
+    if(arr.length===0){ target.innerHTML = '<div class="muted">No saved queries yet.</div>'; return; }
+    target.innerHTML = arr.map((o,i)=>`<div style="padding:10px;border-radius:8px;background:rgba(255,255,255,0.03);margin-bottom:8px"><b>${i+1}. ${o.name}</b><div style="font-size:0.9rem;margin-top:6px">${o.message}</div><div style="font-size:0.8rem;opacity:0.85;margin-top:8px">${new Date(o.time).toLocaleString()}</div></div>`).join('');
+  }
+
+  /* init UI and events */
+  loadSlots(); loadQueue(); renderGrid(); renderQueue(); showSavedQueries();
+
+  // Initialize ML model
+  initMLModel();
+
+  // start simulator by default
+  startSensorSimulator();
+
+  simulateToggleBtn.addEventListener('click', ()=>{
+    sensorEnabled = !sensorEnabled;
+    if(sensorEnabled){
+      simulateToggleBtn.textContent = 'Sensor Simulator: ON';
+      startSensorSimulator();
+    } else {
+      simulateToggleBtn.textContent = 'Sensor Simulator: OFF';
+      stopSensorSimulator();
+    }
+  });
+
+  resetBtn.addEventListener('click', ()=> { if(confirm('Reset all slots to free?')) resetAll(); });
+
+  aiBtn.addEventListener('click', async ()=>{
+    aiText.textContent = '🤖 Thinking...';
+    const prediction = await getAIPrediction();
+    setTimeout(()=> aiText.textContent = prediction, 900);
+  });
+
+  suggestBtn.addEventListener('click', ()=>{
+    const best = suggestBestSlot();
+    if(best){
+      notify(`Suggested: ${best.toUpperCase()} (free)`);
+      document.getElementById(best).scrollIntoView({behavior:'smooth',block:'center'});
+      document.getElementById(best).classList.add('sensing');
+      setTimeout(()=> document.getElementById(best).classList.remove('sensing'),1200);
+    } else {
+      notify('No free slots right now. Consider joining queue.');
+    }
+  });
+
+  joinQueueBtn.addEventListener('click', joinQueue);
+
+  // Query form
+  document.getElementById('queryForm').addEventListener('submit', (e)=>{
+    e.preventDefault();
+    const name = document.getElementById('qname').value.trim();
+    const email = document.getElementById('qemail').value.trim();
+    const message = document.getElementById('qmsg').value.trim();
+    if(!name || !email || !message){ notify('Please fill all fields'); return; }
+    // Save to localStorage
+    saveQueryObj({name,email,message,time:Date.now()});
+    // Send email via EmailJS
+    emailjs.send('service_syw7dhh', 'Prashant9569', {
+      from_name: name,
+      from_email: email,
+      message: message,
+      to_email: 'ps956984mishr@gmail.com'
+    }).then(function(response) {
+      notify('Query saved locally and email sent ✓');
+    }, function(error) {
+      notify('Query saved locally, but email failed to send.');
+      console.error('EmailJS error:', error);
+    });
+    // Clear form
+    document.getElementById('qname').value=''; document.getElementById('qemail').value=''; document.getElementById('qmsg').value='';
+    showSavedQueries();
+  });
+
+  document.getElementById('showQueries').addEventListener('click', showSavedQueries);
+
+  /* AI Agent Chat */
+  function addChatMessage(message, isUser = false) {
+    const msgDiv = document.createElement('div');
+    msgDiv.style.marginBottom = '8px';
+    msgDiv.style.padding = '6px 10px';
+    msgDiv.style.borderRadius = '6px';
+    msgDiv.style.maxWidth = '80%';
+    if (isUser) {
+      msgDiv.style.background = '#3b82f6';
+      msgDiv.style.color = '#fff';
+      msgDiv.style.alignSelf = 'flex-end';
+      msgDiv.style.marginLeft = 'auto';
+    } else {
+      msgDiv.style.background = 'rgba(51,65,85,0.5)';
+      msgDiv.style.color = '#e2e8f0';
+    }
+    msgDiv.textContent = message;
+    chatMessagesEl.appendChild(msgDiv);
+    chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
+  }
+
+  // Function to get OpenAI API key
+  function getOpenAIKey() {
+    let key = sessionStorage.getItem('openai_api_key');
+    if (!key) {
+      key = prompt('Enter your OpenAI API key (it will be stored in session for this demo):');
+      if (key) {
+        sessionStorage.setItem('openai_api_key', key);
+      }
+    }
+    return key;
+  }
+
+  async function getAIResponse(userMessage) {
+    const apiKey = getOpenAIKey();
+    if (!apiKey) {
+      return 'API key required for ChatGPT responses. Please provide your OpenAI API key.';
+    }
+
+    const total = Object.keys(slots).length;
+    const free = Object.keys(slots).filter(k => slots[k].state === 'free').length;
+    const freePct = Math.round((free / total) * 100);
+    const queueLength = queue.length;
+    const waitTime = predictQueueWaitTime();
+    const bestSlot = suggestBestSlot();
+
+    const systemPrompt = `You are an AI assistant for SmartPark India, an EV parking management system. Provide helpful, concise responses about parking. Current status: ${free} free slots out of ${total} (${freePct}%). Queue length: ${queueLength}. ${queueLength > 0 ? `Estimated wait time: ${waitTime} seconds.` : 'No queue.'} ${bestSlot ? `Suggested slot: ${bestSlot.toUpperCase()}.` : 'No free slots.'} Be friendly and informative.`;
+
+    try {
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          model: 'gpt-3.5-turbo',
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userMessage }
+          ],
+          max_tokens: 150,
+          temperature: 0.7
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data.choices[0].message.content.trim();
+    } catch (error) {
+      console.error('ChatGPT API error:', error);
+      return 'Sorry, I\'m having trouble connecting to ChatGPT. Please try again later or check your API key.';
+    }
+  }
+
+  sendChatBtn.addEventListener('click', async () => {
+    const message = chatInputEl.value.trim();
+    if (!message) return;
+    addChatMessage(message, true);
+    chatInputEl.value = '';
+    setTimeout(async () => {
+      const response = await getAIResponse(message);
+      addChatMessage(response);
+    }, 500);
+  });
+
+  chatInputEl.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') sendChatBtn.click();
+  });
+
+  /* Voice Input */
+  let recognition = null;
+  if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.lang = 'en-US';
+
+    recognition.onstart = () => {
+      voiceChatBtn.textContent = '🎤 Listening...';
+      voiceChatBtn.style.background = '#ef4444';
+    };
+
+    recognition.onresult = (event) => {
+      const transcript = event.results[0][0].transcript;
+      chatInputEl.value = transcript;
+      sendChatBtn.click();
+    };
+
+    recognition.onend = () => {
+      voiceChatBtn.textContent = '🎤 Voice';
+      voiceChatBtn.style.background = '';
+    };
+
+    recognition.onerror = (event) => {
+      notify('Voice recognition error: ' + event.error);
+      voiceChatBtn.textContent = '🎤 Voice';
+      voiceChatBtn.style.background = '';
+    };
+  }
+
+  voiceChatBtn.addEventListener('click', () => {
+    if (recognition) {
+      recognition.start();
+    } else {
+      notify('Voice recognition not supported in this browser.');
+    }
+  });
+
+  /* tiny helper: when page unload make sure timers cleared from memory (persist state only) */
+  window.addEventListener('beforeunload', ()=> {
+    // clear timer ids so they are not serialized
+    for(const k of Object.keys(slots)) slots[k].timerId = null;
+    localStorage.setItem(storageKey, JSON.stringify(slots));
+    localStorage.setItem(queueKey, JSON.stringify(queue));
+  });
+  </script>
+</body>
+</html>
